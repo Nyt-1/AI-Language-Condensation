@@ -1,0 +1,42 @@
+name: Publish skill version
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".claude/skills/**"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            company-intelligence-report:
+              - '.claude/skills/company-intelligence-report/**'
+            photo-link-reader:
+              - '.claude/skills/photo-link-reader/**'
+            deal-pipeline-digest:
+              - '.claude/skills/deal-pipeline-digest/**'
+            generate-doc-format:
+              - '.claude/skills/generate-doc-format/**'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Publish new skill versions
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COMPANY_SKILL_ID: ${{ secrets.COMPANY_SKILL_ID }}
+          PHOTO_LINK_SKILL_ID: ${{ secrets.PHOTO_LINK_SKILL_ID }}
+          PIPELINE_SKILL_ID: ${{ secrets.PIPELINE_SKILL_ID }}
+          DOC_FORMAT_SKILL_ID: ${{ secrets.DOC_FORMAT_SKILL_ID }}
+        run: |
+          python .github/scripts/Publish_Skill.py \
+            ${{ steps.changes.outputs.company-intelligence-report == 'true' && 'company-intelligence-report' || '' }} \
+            ${{ steps.changes.outputs.photo-link-reader == 'true' && 'photo-link-reader' || '' }} \
+            ${{ steps.changes.outputs.deal-pipeline-digest == 'true' && 'deal-pipeline-digest' || '' }} \
+            ${{ steps.changes.outputs.generate-doc-format == 'true' && 'generate-doc-format' || '' }}

@@ -1,0 +1,36 @@
+name: 1. Deal Pipeline Digest
+
+on:
+  schedule:
+    - cron: '0 7 * * 4'
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+jobs:
+  pipeline-digest:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'issues' || github.event.issue.title == '1. Deal Pipeline Digest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run deal pipeline digest → Slack + Coda
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TEAM_MEMBERS: ${{ secrets.TEAM_MEMBERS }}
+          CODA_API_TOKEN: ${{ secrets.CODA_API_TOKEN }}
+          CODA_DOC_ID: ${{ secrets.CODA_DOC_ID }}
+          CODA_TABLE_ID: ${{ secrets.CODA_TABLE_ID }}
+          CODA_TIMELINE_TABLE_ID: ${{ secrets.CODA_TIMELINE_ID }}
+          PIPELINE_SOURCE_CHANNEL: ${{ secrets.PIPELINE_SOURCE_CHANNEL }}
+          DEST_CHANNEL_ID: ${{ secrets.DEST_CHANNEL_ID }}
+          PIPELINE_SKILL_ID: ${{ secrets.PIPELINE_SKILL_ID }}
+          PHOTO_LINK_SKILL_ID: ${{ secrets.PHOTO_LINK_SKILL_ID }}
+        run: python .github/scripts/Pipeline_Digest.py

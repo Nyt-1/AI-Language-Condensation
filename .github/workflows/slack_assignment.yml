@@ -1,0 +1,32 @@
+name: 4. Assign Companies
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+jobs:
+  check-replies:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'issues' || github.event.issue.title == '4. Assign Companies'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Check for assign/reassign replies
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          CODA_API_TOKEN: ${{ secrets.CODA_API_TOKEN }}
+          CODA_DOC_ID: ${{ secrets.CODA_DOC_ID }}
+          CODA_TABLE_ID: ${{ secrets.CODA_TABLE_ID }}
+          CODA_TIMELINE_TABLE_ID: ${{ secrets.CODA_TIMELINE_ID }}
+          DEST_CHANNEL_ID: ${{ secrets.DEST_CHANNEL_ID }}
+          NOTIFICATION_CHANNEL: ${{ secrets.NOTIFICATION_CHANNEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TEAM_MEMBERS: ${{ secrets.TEAM_MEMBERS }}
+        run: python .github/scripts/Slack_Assignment.py

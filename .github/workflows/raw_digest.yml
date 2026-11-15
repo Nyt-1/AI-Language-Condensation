@@ -1,0 +1,37 @@
+
+name: 2. Raw Digest
+
+on:
+  workflow_run:
+    workflows: ["1. Deal Pipeline Digest"]
+    types:
+      - completed
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+jobs:
+  post-to-slack:
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.event.issue.title == '2. Raw Digest')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run digest → Slack
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RAW_SOURCE_CHANNEL: ${{ secrets.RAW_SOURCE_CHANNEL }}
+          DEST_CHANNEL_ID: ${{ secrets.DEST_CHANNEL_ID }}
+          COMPANY_SKILL_ID: ${{ secrets.COMPANY_SKILL_ID }}
+          PHOTO_LINK_SKILL_ID: ${{ secrets.PHOTO_LINK_SKILL_ID }}
+        run: python .github/scripts/Raw_Digest.py

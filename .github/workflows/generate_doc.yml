@@ -1,0 +1,58 @@
+name: Generate Document Report
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+jobs:
+  generate-doc:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.issue.title, 'Generate Report')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
+      - name: Install Python dependencies
+        run: pip install anthropic requests python-dotenv
+
+      - name: Extract report params
+        id: params
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            JSON=$(echo "$ISSUE_BODY" | grep -oP '(?<=report-params: )\{.*\}(?= -->)' || echo '{}')
+          else
+            JSON='{}'
+          fi
+          echo "full_report=$(echo "$JSON" | jq -r 'if has("full_report") then .full_report else true end')" >> "$GITHUB_OUTPUT"
+          echo "from_date=$(echo "$JSON" | jq -r '.from_date // ""')" >> "$GITHUB_OUTPUT"
+          echo "to_date=$(echo "$JSON" | jq -r '.to_date // ""')" >> "$GITHUB_OUTPUT"
+          echo "person_requested=$(echo "$JSON" | jq -r 'if has("requested_by") then .requested_by else "" end')" >> "$GITHUB_OUTPUT"
+
+      - name: Generate document
+        env:
+          CODA_API_TOKEN: ${{ secrets.CODA_API_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CODA_DOC_ID: ${{ secrets.CODA_DOC_ID }}
+          CODA_TABLE_ID: ${{ secrets.CODA_TABLE_ID }}
+          CODA_REPORTS_TABLE_ID: ${{ secrets.CODA_REPORTS_TABLE_ID }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          REPORT_DEST_CHANNEL: ${{ secrets.REPORT_DEST_CHANNEL }}
+          DOC_FORMAT_SKILL_ID: ${{ secrets.DOC_FORMAT_SKILL_ID }}
+          FULL_REPORT: ${{ steps.params.outputs.full_report }}
+          FROM_DATE: ${{ steps.params.outputs.from_date }}
+          TO_DATE: ${{ steps.params.outputs.to_date }}
+          PERSON_REQUESTED: ${{ steps.params.outputs.person_requested }}
+        run: python .github/scripts/Generate_Doc.py
